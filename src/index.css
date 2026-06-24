@@ -1,0 +1,42 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --navy-deep: #0c1226;
+  --navy: #102463;
+  --navy-mid: #14307a;
+  --navy-soft: #3a559e;
+  --blue-light: #9fb4e8;
+  --red: #e0312a;
+  --ink: #101427;
+  --ink-soft: #5b6175;
+  --grey: #9aa0b4;
+  --bg-light: #f6f7fb;
+  --card-border: #e7e9f2;
+  --gold: #e6a817;
+
+  --font-display: 'Bricolage Grotesque', sans-serif;
+  --font-body: 'Hanken Grotesk', sans-serif;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background: #eef0f6;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+button {
+  font-family: inherit;
+}

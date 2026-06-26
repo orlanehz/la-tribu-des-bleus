@@ -203,7 +203,7 @@ export function MessageBubble({
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              maxLength={200}
+              maxLength={30}
               autoFocus
               placeholder="Allez les Bleus ! 🇫🇷"
               rows={3}
@@ -220,7 +220,7 @@ export function MessageBubble({
               }}
             />
             <div style={{ textAlign: 'right', fontSize: 11, color: '#9aa0b4', marginBottom: 12 }}>
-              {text.length}/200
+              {text.length}/30
             </div>
 
             <button

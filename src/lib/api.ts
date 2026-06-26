@@ -60,6 +60,16 @@ export async function fetchMyPrediction(
   return data
 }
 
+/** Names that have already submitted a prediction for this match. */
+export async function fetchPlayedNames(matchId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('predictions')
+    .select('player_name')
+    .eq('match_id', matchId)
+  if (error) throw error
+  return (data ?? []).map((d) => d.player_name)
+}
+
 /** Insert or update this player's prediction for the match (one per person). */
 export async function savePrediction(p: Prediction): Promise<void> {
   const { error } = await supabase

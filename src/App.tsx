@@ -9,6 +9,7 @@ import {
   fetchCurrentMatch,
   fetchLeaderboard,
   fetchMyPrediction,
+  fetchPlayedNames,
   fetchPot,
   savePrediction,
   type LeaderboardRow,
@@ -20,6 +21,7 @@ export default function App() {
 
   const [tab, setTab] = useState<Tab>('prono')
   const [match, setMatch] = useState<Match | null>(null)
+  const [playedNames, setPlayedNames] = useState<string[]>([])
   const [pot, setPot] = useState('—')
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([])
   const [loadingBoard, setLoadingBoard] = useState(true)
@@ -69,6 +71,12 @@ export default function App() {
         if (cancelled) return
         setMatch(m)
         setPot(p)
+        if (m) {
+          // Who's already played → greys out names in the picker.
+          fetchPlayedNames(m.id)
+            .then((names) => !cancelled && setPlayedNames(names))
+            .catch(() => {})
+        }
         if (m && name) {
           const mine = await fetchMyPrediction(m.id, name)
           if (!cancelled && mine) {
@@ -118,7 +126,7 @@ export default function App() {
   }
 
   return (
-    <PhoneFrame screenBg={tab === 'prono' || !name ? '#102463' : '#F6F7FB'}>
+    <PhoneFrame screenBg={!name ? '#F6F7FB' : tab === 'prono' ? '#102463' : '#F6F7FB'}>
       {error && (
         <div
           style={{
@@ -141,7 +149,7 @@ export default function App() {
       )}
 
         {!name ? (
-          <NameGate onSubmit={saveName} />
+          <NameGate playedNames={playedNames} onSubmit={saveName} />
         ) : tab === 'prono' ? (
           loadingMatch ? (
             <CenterMessage dark text="Chargement du match…" />

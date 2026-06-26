@@ -11,6 +11,7 @@ export function PronoScreen({
   onValidate,
   saving,
   alreadyPredicted,
+  locked,
   activeTab,
   onTab,
 }: {
@@ -22,6 +23,7 @@ export function PronoScreen({
   onValidate: () => void
   saving: boolean
   alreadyPredicted: boolean
+  locked: boolean
   activeTab: Tab
   onTab: (t: Tab) => void
 }) {
@@ -98,7 +100,7 @@ export function PronoScreen({
             marginTop: 4,
           }}
         >
-          Prono de {playerName}
+          {locked ? 'Prono verrouillé de' : 'Prono de'} {playerName}
         </div>
 
         <div
@@ -113,6 +115,7 @@ export function PronoScreen({
           <TeamColumn
             name={match.home_team}
             score={cFr}
+            locked={locked}
             onDec={() => step('cFr', -1)}
             onInc={() => step('cFr', 1)}
           />
@@ -130,32 +133,62 @@ export function PronoScreen({
           <TeamColumn
             name={match.away_team}
             score={cOpp}
+            locked={locked}
             onDec={() => step('cOpp', -1)}
             onInc={() => step('cOpp', 1)}
           />
         </div>
 
-        <button
-          onClick={onValidate}
-          disabled={saving}
-          style={{
-            marginTop: 'auto',
-            width: '100%',
-            height: 64,
-            border: 'none',
-            borderRadius: 18,
-            background: '#e0312a',
-            color: '#fff',
-            fontFamily: 'var(--font-display)',
-            fontWeight: 800,
-            fontSize: 20,
-            cursor: saving ? 'default' : 'pointer',
-            opacity: saving ? 0.7 : 1,
-            boxShadow: '0 12px 26px rgba(0,0,0,.35)',
-          }}
-        >
-          {buttonLabel}
-        </button>
+        {locked ? (
+          <div
+            style={{
+              marginTop: 'auto',
+              width: '100%',
+              minHeight: 64,
+              borderRadius: 18,
+              background: 'rgba(255,255,255,.08)',
+              border: '1.5px solid rgba(255,255,255,.18)',
+              color: '#eaf0ff',
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              fontSize: 16,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 2,
+              padding: '12px 16px',
+              textAlign: 'center',
+            }}
+          >
+            <span>🔒 Pronos fermés</span>
+            <span style={{ fontFamily: 'var(--font-body)', fontWeight: 500, fontSize: 13, color: '#9fb4e8' }}>
+              Le match a commencé — ton prono est figé.
+            </span>
+          </div>
+        ) : (
+          <button
+            onClick={onValidate}
+            disabled={saving}
+            style={{
+              marginTop: 'auto',
+              width: '100%',
+              height: 64,
+              border: 'none',
+              borderRadius: 18,
+              background: '#e0312a',
+              color: '#fff',
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              fontSize: 20,
+              cursor: saving ? 'default' : 'pointer',
+              opacity: saving ? 0.7 : 1,
+              boxShadow: '0 12px 26px rgba(0,0,0,.35)',
+            }}
+          >
+            {buttonLabel}
+          </button>
+        )}
       </div>
 
       <BottomNav active={activeTab} onChange={onTab} variant="dark" />
@@ -166,11 +199,13 @@ export function PronoScreen({
 function TeamColumn({
   name,
   score,
+  locked,
   onDec,
   onInc,
 }: {
   name: string
   score: number
+  locked: boolean
   onDec: () => void
   onInc: () => void
 }) {
@@ -199,44 +234,47 @@ function TeamColumn({
       >
         {score}
       </div>
-      <div
-        style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 18 }}
-      >
-        <button
-          onClick={onDec}
-          style={{
-            width: 46,
-            height: 46,
-            borderRadius: '50%',
-            border: '1.5px solid rgba(255,255,255,.4)',
-            background: 'rgba(255,255,255,.08)',
-            color: '#fff',
-            fontWeight: 800,
-            fontSize: 26,
-            cursor: 'pointer',
-            lineHeight: 1,
-          }}
+      {/* Steppers disappear once the prono is locked — the score stays visible. */}
+      {!locked && (
+        <div
+          style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 18 }}
         >
-          −
-        </button>
-        <button
-          onClick={onInc}
-          style={{
-            width: 46,
-            height: 46,
-            borderRadius: '50%',
-            border: 'none',
-            background: '#e0312a',
-            color: '#fff',
-            fontWeight: 800,
-            fontSize: 24,
-            cursor: 'pointer',
-            lineHeight: 1,
-          }}
-        >
-          +
-        </button>
-      </div>
+          <button
+            onClick={onDec}
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: '50%',
+              border: '1.5px solid rgba(255,255,255,.4)',
+              background: 'rgba(255,255,255,.08)',
+              color: '#fff',
+              fontWeight: 800,
+              fontSize: 26,
+              cursor: 'pointer',
+              lineHeight: 1,
+            }}
+          >
+            −
+          </button>
+          <button
+            onClick={onInc}
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: '50%',
+              border: 'none',
+              background: '#e0312a',
+              color: '#fff',
+              fontWeight: 800,
+              fontSize: 24,
+              cursor: 'pointer',
+              lineHeight: 1,
+            }}
+          >
+            +
+          </button>
+        </div>
+      )}
     </div>
   )
 }

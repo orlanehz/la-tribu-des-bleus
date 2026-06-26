@@ -4,6 +4,7 @@ export type Match = {
   id: string
   round: string
   kickoff: string
+  kickoff_at: string | null
   home_team: string
   away_team: string
   home_actual: number | null

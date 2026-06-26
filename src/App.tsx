@@ -31,8 +31,20 @@ export default function App() {
   const [saving, setSaving] = useState(false)
   const [alreadyPredicted, setAlreadyPredicted] = useState(false)
 
+  // Tick every 20s so the lock flips on its own at kickoff even if the page
+  // stays open. Predictions close once now >= the match's kickoff_at.
+  const [nowMs, setNowMs] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 20_000)
+    return () => clearInterval(id)
+  }, [])
+  const locked = match?.kickoff_at
+    ? nowMs >= new Date(match.kickoff_at).getTime()
+    : false
+
   const clamp = (v: number, d: number) => Math.min(9, Math.max(0, v + d))
   const step = (side: 'cFr' | 'cOpp', d: number) => {
+    if (locked) return
     if (side === 'cFr') setCFr((v) => clamp(v, d))
     else setCOpp((v) => clamp(v, d))
   }
@@ -81,7 +93,7 @@ export default function App() {
   }, [refreshLeaderboard])
 
   const validate = async () => {
-    if (!match || !name) return
+    if (!match || !name || locked) return
     setSaving(true)
     setError(null)
     try {
@@ -95,7 +107,11 @@ export default function App() {
       await refreshLeaderboard()
       setTab('classement')
     } catch (e) {
-      setError(String(e))
+      // The DB trigger rejects writes after kickoff — show a friendly message.
+      const msg = String(e).includes('Pronos fermés')
+        ? 'Pronos fermés : le match a déjà commencé.'
+        : String(e)
+      setError(msg)
     } finally {
       setSaving(false)
     }
@@ -139,6 +155,7 @@ export default function App() {
               onValidate={validate}
               saving={saving}
               alreadyPredicted={alreadyPredicted}
+              locked={locked}
               activeTab={tab}
               onTab={setTab}
             />

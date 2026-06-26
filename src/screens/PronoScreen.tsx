@@ -172,27 +172,39 @@ export function PronoScreen({
             </span>
           </div>
         ) : (
-          <button
-            onClick={onValidate}
-            disabled={saving}
-            style={{
-              marginTop: 'auto',
-              width: '100%',
-              height: 64,
-              border: 'none',
-              borderRadius: 18,
-              background: '#e0312a',
-              color: '#fff',
-              fontFamily: 'var(--font-display)',
-              fontWeight: 800,
-              fontSize: 20,
-              cursor: saving ? 'default' : 'pointer',
-              opacity: saving ? 0.7 : 1,
-              boxShadow: '0 12px 26px rgba(0,0,0,.35)',
-            }}
-          >
-            {buttonLabel}
-          </button>
+          <div style={{ marginTop: 'auto' }}>
+            <button
+              onClick={onValidate}
+              disabled={saving}
+              style={{
+                width: '100%',
+                height: 64,
+                border: 'none',
+                borderRadius: 18,
+                background: '#e0312a',
+                color: '#fff',
+                fontFamily: 'var(--font-display)',
+                fontWeight: 800,
+                fontSize: 20,
+                cursor: saving ? 'default' : 'pointer',
+                opacity: saving ? 0.7 : 1,
+                boxShadow: '0 12px 26px rgba(0,0,0,.35)',
+              }}
+            >
+              {buttonLabel}
+            </button>
+            <div
+              style={{
+                textAlign: 'center',
+                color: '#9fb4e8',
+                fontSize: 12,
+                fontWeight: 500,
+                marginTop: 10,
+              }}
+            >
+              En validant, tu acceptes de miser <b style={{ color: '#eaf0ff' }}>1 €</b> sur ce match.
+            </div>
+          </div>
         )}
       </div>
 

@@ -155,8 +155,8 @@ export async function fetchClassement(): Promise<Classement> {
     supabase.from('config').select('stake_eur').eq('id', 1).maybeSingle(),
     supabase
       .from('matches')
-      .select('id, round, home_team, away_team, home_actual, away_actual, is_current, created_at')
-      .order('created_at', { ascending: true }),
+      .select('id, round, home_team, away_team, home_actual, away_actual, is_current, kickoff_at')
+      .order('kickoff_at', { ascending: true, nullsFirst: false }),
     supabase.from('predictions').select('match_id, player_name, home_score, away_score'),
   ])
   if (cfgRes.error) throw cfgRes.error

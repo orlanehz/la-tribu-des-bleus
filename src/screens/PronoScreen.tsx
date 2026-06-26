@@ -30,7 +30,7 @@ export function PronoScreen({
   activeTab: Tab
   onTab: (t: Tab) => void
 }) {
-  const { messages, post } = useMessages(match.id)
+  const { messages, post } = useMessages(match.id, 'live')
 
   const buttonLabel = saving
     ? 'Enregistrement…'

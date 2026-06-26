@@ -34,7 +34,7 @@ export function WaitingScreen({
   activeTab: Tab
   onTab: (t: Tab) => void
 }) {
-  const { messages, post } = useMessages(match?.id)
+  const { messages, post } = useMessages(match?.id, 'post')
   const results = classement?.results ?? []
   const rows = classement?.rows ?? []
   const last: MatchResult | undefined =

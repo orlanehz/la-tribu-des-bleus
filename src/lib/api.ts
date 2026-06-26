@@ -81,12 +81,20 @@ export type Message = {
   created_at: string
 }
 
-/** Recent messages for one match's banner (newest first). */
-export async function fetchMessages(matchId: string, limit = 40): Promise<Message[]> {
+/** Which thread of a match: 'live' (during) or 'post' (after the result). */
+export type MessagePhase = 'live' | 'post'
+
+/** Recent messages for one match's banner, in the given phase (newest first). */
+export async function fetchMessages(
+  matchId: string,
+  phase: MessagePhase,
+  limit = 40,
+): Promise<Message[]> {
   const { data, error } = await supabase
     .from('messages')
     .select('author, author_city, text, created_at')
     .eq('match_id', matchId)
+    .eq('phase', phase)
     .order('created_at', { ascending: false })
     .limit(limit)
   if (error) throw error
@@ -98,7 +106,10 @@ export async function fetchMessages(matchId: string, limit = 40): Promise<Messag
   }))
 }
 
-/** Post a message attached to the given match. */
+/**
+ * Post a message attached to the given match. The phase ('live' vs 'post') is
+ * set server-side from the match's result state, so it can't be mislabelled.
+ */
 export async function postMessage(
   matchId: string,
   author: string,

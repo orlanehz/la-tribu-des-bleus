@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
-import { fetchMessages, postMessage, type Message } from '../lib/api'
+import { fetchMessages, postMessage, type Message, type MessagePhase } from '../lib/api'
 
-/** Loads the current match's messages and keeps them fresh (poll every 25s). */
-export function useMessages(matchId: string | null | undefined) {
+/**
+ * Loads one match thread and keeps it fresh (poll every 25s).
+ * `phase` picks the thread: 'live' (during the match) or 'post' (intermatch,
+ * after the result was entered).
+ */
+export function useMessages(matchId: string | null | undefined, phase: MessagePhase) {
   const [messages, setMessages] = useState<Message[]>([])
 
   const load = useCallback(async () => {
@@ -11,11 +15,11 @@ export function useMessages(matchId: string | null | undefined) {
       return
     }
     try {
-      setMessages(await fetchMessages(matchId))
+      setMessages(await fetchMessages(matchId, phase))
     } catch {
       /* banner is non-critical — stay quiet on errors */
     }
-  }, [matchId])
+  }, [matchId, phase])
 
   useEffect(() => {
     load()

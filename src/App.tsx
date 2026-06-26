@@ -102,25 +102,21 @@ export default function App() {
   }
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        padding: '40px 20px 64px',
-      }}
-    >
-      <Header />
-
+    <PhoneFrame screenBg={tab === 'prono' || !name ? '#102463' : '#F6F7FB'}>
       {error && (
         <div
           style={{
-            color: '#e0312a',
+            position: 'absolute',
+            top: 8,
+            left: 12,
+            right: 12,
+            zIndex: 10,
+            color: '#fff',
+            background: '#e0312a',
+            borderRadius: 12,
+            padding: '8px 12px',
             fontWeight: 600,
             fontSize: 13,
-            marginBottom: 16,
-            maxWidth: 390,
             textAlign: 'center',
           }}
         >
@@ -128,7 +124,6 @@ export default function App() {
         </div>
       )}
 
-      <PhoneFrame screenBg={tab === 'prono' || !name ? '#102463' : '#F6F7FB'}>
         {!name ? (
           <NameGate onSubmit={saveName} />
         ) : tab === 'prono' ? (
@@ -161,44 +156,6 @@ export default function App() {
           />
         )}
       </PhoneFrame>
-    </div>
-  )
-}
-
-function Header() {
-  return (
-    <header style={{ fontFamily: 'var(--font-display)', textAlign: 'center', marginBottom: 32 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-        <div
-          style={{
-            display: 'flex',
-            height: 26,
-            width: 14,
-            borderRadius: 3,
-            overflow: 'hidden',
-            boxShadow: '0 1px 2px rgba(0,0,0,.15)',
-          }}
-        >
-          <div style={{ flex: 1, background: '#14307a' }} />
-          <div style={{ flex: 1, background: '#fff' }} />
-          <div style={{ flex: 1, background: '#e0312a' }} />
-        </div>
-        <span style={{ fontWeight: 800, fontSize: 26, color: '#101427', letterSpacing: '-.01em' }}>
-          La Tribu des Bleus
-        </span>
-      </div>
-      <div
-        style={{
-          fontFamily: 'var(--font-body)',
-          fontWeight: 500,
-          fontSize: 14,
-          color: '#5b6175',
-          marginTop: 4,
-        }}
-      >
-        Pronos famille · Coupe du monde 2026
-      </div>
-    </header>
   )
 }
 

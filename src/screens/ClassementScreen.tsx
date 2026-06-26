@@ -203,11 +203,8 @@ function PlayerRow({
           {rank}
         </span>
       )}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: nameWeight, fontSize: 17, color: nameColor }}>{label}</div>
-        <div style={{ fontSize: 12, color: '#9aa0b4', fontWeight: 600, marginTop: 1 }}>
-          {row.points} pt{row.points > 1 ? 's' : ''}
-        </div>
+      <div style={{ flex: 1, minWidth: 0, fontWeight: nameWeight, fontSize: 17, color: nameColor }}>
+        {label}
       </div>
       <span
         style={{

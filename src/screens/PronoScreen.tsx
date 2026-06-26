@@ -1,6 +1,7 @@
 import type { Match } from '../lib/api'
 import { StatusBar } from '../components/PhoneFrame'
 import { BottomNav, type Tab } from '../components/BottomNav'
+import { MessageBubble, MessageTicker, useMessages } from '../components/Messages'
 
 export function PronoScreen({
   match,
@@ -27,6 +28,8 @@ export function PronoScreen({
   activeTab: Tab
   onTab: (t: Tab) => void
 }) {
+  const { messages, post } = useMessages()
+
   const buttonLabel = saving
     ? 'Enregistrement…'
     : alreadyPredicted
@@ -52,7 +55,7 @@ export function PronoScreen({
             'radial-gradient(120% 60% at 50% 0%,rgba(255,255,255,.10),transparent 60%)',
         }}
       />
-      <StatusBar />
+      <StatusBar rightSlot={<MessageTicker messages={messages} />} />
       <div style={{ display: 'flex', height: 5, width: '100%', position: 'relative', zIndex: 1 }}>
         <div style={{ flex: 1, background: '#fff' }} />
         <div style={{ flex: 1, background: '#e0312a' }} />
@@ -190,6 +193,8 @@ export function PronoScreen({
           </button>
         )}
       </div>
+
+      <MessageBubble playerName={playerName} onPost={post} />
 
       <BottomNav active={activeTab} onChange={onTab} variant="dark" />
     </div>

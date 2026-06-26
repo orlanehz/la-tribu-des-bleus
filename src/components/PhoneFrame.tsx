@@ -40,8 +40,18 @@ function useClock() {
   return now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 }
 
-/** Slim top bar showing the real current time. Color flips per screen. */
-export function StatusBar({ dark = false }: { dark?: boolean }) {
+/**
+ * Slim top bar showing the real current time. Color flips per screen.
+ * `rightSlot` lets a screen drop content next to the clock (e.g. the message
+ * ticker on the prono screen).
+ */
+export function StatusBar({
+  dark = false,
+  rightSlot,
+}: {
+  dark?: boolean
+  rightSlot?: ReactNode
+}) {
   const color = dark ? '#0c1226' : '#fff'
   const time = useClock()
   return (
@@ -51,7 +61,7 @@ export function StatusBar({ dark = false }: { dark?: boolean }) {
         flex: 'none',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'flex-start',
+        justifyContent: 'space-between',
         padding: '0 28px',
         fontWeight: 700,
         fontSize: 14,
@@ -60,7 +70,8 @@ export function StatusBar({ dark = false }: { dark?: boolean }) {
         zIndex: 1,
       }}
     >
-      <span>{time}</span>
+      <span style={{ flex: 'none' }}>{time}</span>
+      {rightSlot}
     </div>
   )
 }

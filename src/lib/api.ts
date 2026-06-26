@@ -71,6 +71,33 @@ export async function fetchMyPrediction(
   return data
 }
 
+export type Message = {
+  author: string
+  text: string
+  created_at: string
+}
+
+/** Recent family messages for the scrolling banner (newest first). */
+export async function fetchMessages(limit = 40): Promise<Message[]> {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('author, text, created_at')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (error) throw error
+  return data ?? []
+}
+
+/** Post a message to the banner. */
+export async function postMessage(author: string, text: string): Promise<void> {
+  const clean = text.trim().slice(0, 200)
+  if (!clean) return
+  const { error } = await supabase
+    .from('messages')
+    .insert({ author: author.slice(0, 40), text: clean })
+  if (error) throw error
+}
+
 /** Names that have already submitted a prediction for this match. */
 export async function fetchPlayedNames(matchId: string): Promise<string[]> {
   const { data, error } = await supabase

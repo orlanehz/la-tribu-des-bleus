@@ -109,6 +109,25 @@ export async function setMatchResult(
   if (error) throw new Error(error.message)
 }
 
+/**
+ * Admin-only: activate the next match with its now-known opponent and kickoff.
+ * Same secret code, verified server-side.
+ */
+export async function startNextMatch(
+  opponent: string,
+  kickoffText: string,
+  kickoffAtISO: string,
+  secret: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('start_next_match', {
+    p_secret: secret,
+    p_opponent: opponent,
+    p_kickoff: kickoffText,
+    p_kickoff_at: kickoffAtISO,
+  })
+  if (error) throw new Error(error.message)
+}
+
 const EXACT_POINTS = 3
 const WINNER_POINTS = 1
 

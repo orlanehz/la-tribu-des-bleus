@@ -3,6 +3,7 @@ import { PhoneFrame } from './components/PhoneFrame'
 import { PronoScreen } from './screens/PronoScreen'
 import { ClassementScreen } from './screens/ClassementScreen'
 import { NameGate } from './screens/NameGate'
+import { WaitingScreen } from './screens/WaitingScreen'
 import { AdminPanel } from './screens/AdminPanel'
 import type { Tab } from './components/BottomNav'
 import { usePlayerName } from './lib/usePlayerName'
@@ -59,6 +60,11 @@ export default function App() {
     ? nowMs >= new Date(match.kickoff_at).getTime()
     : false
 
+  // Between matches: the current match is over (result entered) or none is open.
+  const matchFinished =
+    !!match && match.home_actual != null && match.away_actual != null
+  const waiting = !match || matchFinished
+
   const clamp = (v: number, d: number) => Math.min(9, Math.max(0, v + d))
   const step = (side: 'cFr' | 'cOpp', d: number) => {
     if (locked) return
@@ -77,38 +83,45 @@ export default function App() {
     }
   }, [])
 
-  // Load the current match, and the player's existing prediction once we know them.
+  // Load the current match once on mount.
   useEffect(() => {
     let cancelled = false
-    ;(async () => {
-      try {
-        const m = await fetchCurrentMatch()
-        if (cancelled) return
-        setMatch(m)
-        if (m) {
-          // Who's already played → greys out names in the picker.
-          fetchPlayedNames(m.id)
-            .then((names) => !cancelled && setPlayedNames(names))
-            .catch(() => {})
-        }
-        if (m && name) {
-          const mine = await fetchMyPrediction(m.id, name)
-          if (!cancelled && mine) {
-            setCFr(mine.home_score)
-            setCOpp(mine.away_score)
-            setAlreadyPredicted(true)
-          }
-        }
-      } catch (e) {
-        if (!cancelled) setError(String(e))
-      } finally {
-        if (!cancelled) setLoadingMatch(false)
-      }
-    })()
+    fetchCurrentMatch()
+      .then((m) => !cancelled && setMatch(m))
+      .catch((e) => !cancelled && setError(String(e)))
+      .finally(() => !cancelled && setLoadingMatch(false))
     return () => {
       cancelled = true
     }
-  }, [name])
+  }, [])
+
+  // Whenever the match (or player) changes — including after the admin launches
+  // the next match — reload who has played it and this player's own prediction.
+  useEffect(() => {
+    let cancelled = false
+    if (!match) return
+    fetchPlayedNames(match.id)
+      .then((names) => !cancelled && setPlayedNames(names))
+      .catch(() => {})
+
+    // Reset to a fresh prediction, then fill it in if this player already has one.
+    setCFr(1)
+    setCOpp(1)
+    setAlreadyPredicted(false)
+    if (name) {
+      fetchMyPrediction(match.id, name)
+        .then((mine) => {
+          if (cancelled || !mine) return
+          setCFr(mine.home_score)
+          setCOpp(mine.away_score)
+          setAlreadyPredicted(true)
+        })
+        .catch(() => {})
+    }
+    return () => {
+      cancelled = true
+    }
+  }, [match?.id, name])
 
   useEffect(() => {
     refreshLeaderboard()
@@ -167,9 +180,18 @@ export default function App() {
         ) : tab === 'prono' ? (
           loadingMatch ? (
             <CenterMessage dark text="Chargement du match…" />
-          ) : match ? (
-            <PronoScreen
+          ) : waiting ? (
+            <WaitingScreen
               match={match}
+              myCFr={cFr}
+              myCOpp={cOpp}
+              hasPrediction={alreadyPredicted}
+              activeTab={tab}
+              onTab={setTab}
+            />
+          ) : (
+            <PronoScreen
+              match={match!}
               playerName={name}
               cFr={cFr}
               cOpp={cOpp}
@@ -181,8 +203,6 @@ export default function App() {
               activeTab={tab}
               onTab={setTab}
             />
-          ) : (
-            <CenterMessage dark text="Aucun match en cours. Reviens bientôt !" />
           )
         ) : (
           <ClassementScreen

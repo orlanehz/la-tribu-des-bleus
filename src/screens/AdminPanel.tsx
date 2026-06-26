@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import type { Match } from '../lib/api'
-import { setMatchResult } from '../lib/api'
+import { setMatchResult, startNextMatch } from '../lib/api'
 
 /**
- * Hidden admin overlay to enter the real match result. Protected by a secret
- * code checked server-side. On success the leaderboard recomputes everyone's
- * points (exact = 3, right winner = 1).
+ * Hidden admin overlay. Two actions, both guarded by a secret code checked
+ * server-side:
+ *  1. Enter the current match's result (recomputes everyone's gains).
+ *  2. Launch the next match once its opponent and date are known.
+ * Between the two, the app sits on the waiting screen.
  */
 export function AdminPanel({
   match,
@@ -16,27 +18,64 @@ export function AdminPanel({
   onClose: () => void
   onSaved: () => void
 }) {
-  const [home, setHome] = useState(match?.home_actual ?? 0)
-  const [away, setAway] = useState(match?.away_actual ?? 0)
   const [code, setCode] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState(false)
 
+  const finished = match && match.home_actual != null && match.away_actual != null
   const homeTeam = match?.home_team ?? 'France'
   const awayTeam = match?.away_team ?? 'Adversaire'
 
-  const submit = async () => {
-    setSaving(true)
-    setError(null)
+  // --- Result section ---
+  const [home, setHome] = useState(match?.home_actual ?? 0)
+  const [away, setAway] = useState(match?.away_actual ?? 0)
+  const [savingResult, setSavingResult] = useState(false)
+  const [resultMsg, setResultMsg] = useState<string | null>(null)
+  const [resultErr, setResultErr] = useState<string | null>(null)
+
+  const saveResult = async () => {
+    setSavingResult(true)
+    setResultErr(null)
+    setResultMsg(null)
     try {
       await setMatchResult(home, away, code)
-      setDone(true)
+      setResultMsg(`✅ ${homeTeam} ${home} – ${away} ${awayTeam} enregistré`)
       onSaved()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setResultErr(e instanceof Error ? e.message : String(e))
     } finally {
-      setSaving(false)
+      setSavingResult(false)
+    }
+  }
+
+  // --- Next match section ---
+  const [opponent, setOpponent] = useState('')
+  const [datetime, setDatetime] = useState('')
+  const [savingNext, setSavingNext] = useState(false)
+  const [nextMsg, setNextMsg] = useState<string | null>(null)
+  const [nextErr, setNextErr] = useState<string | null>(null)
+
+  const launchNext = async () => {
+    setSavingNext(true)
+    setNextErr(null)
+    setNextMsg(null)
+    try {
+      const d = new Date(datetime)
+      if (isNaN(d.getTime())) throw new Error('Date invalide')
+      const datePart = d.toLocaleDateString('fr-FR', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+      })
+      const timePart = d
+        .toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+        .replace(':', 'h')
+      const text = `${datePart} · ${timePart}`.replace(/^./, (c) => c.toUpperCase())
+      await startNextMatch(opponent, text, d.toISOString(), code)
+      setNextMsg(`✅ Match lancé : France – ${opponent.toUpperCase()}`)
+      onSaved()
+    } catch (e) {
+      setNextErr(e instanceof Error ? e.message : String(e))
+    } finally {
+      setSavingNext(false)
     }
   }
 
@@ -57,6 +96,8 @@ export function AdminPanel({
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '100%',
+          maxHeight: '92%',
+          overflowY: 'auto',
           background: '#fff',
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
@@ -69,7 +110,7 @@ export function AdminPanel({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            marginBottom: 4,
+            marginBottom: 14,
           }}
         >
           <div
@@ -80,7 +121,7 @@ export function AdminPanel({
               color: '#101427',
             }}
           >
-            Résultat du match
+            Admin
           </div>
           <button
             onClick={onClose}
@@ -97,43 +138,29 @@ export function AdminPanel({
           </button>
         </div>
 
-        {done ? (
-          <div style={{ padding: '24px 0 8px', textAlign: 'center' }}>
-            <div style={{ fontSize: 40 }}>✅</div>
-            <div
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 800,
-                fontSize: 18,
-                color: '#101427',
-                marginTop: 8,
-              }}
-            >
-              {homeTeam} {home} – {away} {awayTeam}
-            </div>
-            <div style={{ color: '#5b6175', fontSize: 14, marginTop: 4 }}>
-              Classement mis à jour !
-            </div>
-            <button
-              onClick={onClose}
-              style={primaryBtn}
-            >
-              Fermer
-            </button>
-          </div>
-        ) : (
-          <>
-            <div style={{ color: '#5b6175', fontSize: 13, marginBottom: 18 }}>
-              {match?.round} · entre le score final, les points se recalculent.
-            </div>
+        <input
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="Code admin"
+          type="password"
+          style={inputStyle}
+        />
 
+        {/* ---- Result of the current match ---- */}
+        <SectionLabel>Résultat du match en cours</SectionLabel>
+        {match ? (
+          <>
+            <div style={{ color: '#5b6175', fontSize: 13, marginBottom: 14 }}>
+              {match.round} · {homeTeam} vs {awayTeam}
+              {finished ? ' (déjà saisi, modifiable)' : ''}
+            </div>
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 18,
-                marginBottom: 22,
+                marginBottom: 14,
               }}
             >
               <ScoreInput label={homeTeam} value={home} onChange={setHome} />
@@ -142,54 +169,76 @@ export function AdminPanel({
               </span>
               <ScoreInput label={awayTeam} value={away} onChange={setAway} />
             </div>
-
-            <input
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="Code admin"
-              type="password"
-              style={{
-                width: '100%',
-                height: 50,
-                borderRadius: 12,
-                border: '1.5px solid #e7e9f2',
-                padding: '0 16px',
-                fontSize: 16,
-                fontFamily: 'var(--font-body)',
-                outline: 'none',
-                marginBottom: 12,
-              }}
-            />
-
-            {error && (
-              <div style={{ color: '#e0312a', fontWeight: 600, fontSize: 13, marginBottom: 12 }}>
-                {error}
-              </div>
-            )}
-
+            {resultErr && <ErrorText>{resultErr}</ErrorText>}
+            {resultMsg && <SuccessText>{resultMsg}</SuccessText>}
             <button
-              onClick={submit}
-              disabled={saving || code.length === 0}
-              style={{
-                ...primaryBtn,
-                marginTop: 0,
-                opacity: saving || code.length === 0 ? 0.5 : 1,
-                cursor: saving || code.length === 0 ? 'default' : 'pointer',
-              }}
+              onClick={saveResult}
+              disabled={savingResult || code.length === 0}
+              style={{ ...primaryBtn, opacity: savingResult || !code ? 0.5 : 1 }}
             >
-              {saving ? 'Enregistrement…' : 'Valider le résultat'}
+              {savingResult ? 'Enregistrement…' : 'Valider le résultat'}
             </button>
           </>
+        ) : (
+          <div style={{ color: '#9aa0b4', fontSize: 14, marginBottom: 8 }}>
+            Aucun match en cours.
+          </div>
         )}
+
+        <div style={{ height: 1, background: '#eef0f4', margin: '24px 0' }} />
+
+        {/* ---- Launch the next match ---- */}
+        <SectionLabel>Lancer le match suivant</SectionLabel>
+        <div style={{ color: '#5b6175', fontSize: 13, marginBottom: 14 }}>
+          Quand l'adversaire et la date sont connus. La France passe alors en
+          mode prono pour ce nouveau match.
+        </div>
+        <input
+          value={opponent}
+          onChange={(e) => setOpponent(e.target.value)}
+          placeholder="Adversaire (ex. Brésil)"
+          style={inputStyle}
+        />
+        <input
+          value={datetime}
+          onChange={(e) => setDatetime(e.target.value)}
+          type="datetime-local"
+          style={inputStyle}
+        />
+        {nextErr && <ErrorText>{nextErr}</ErrorText>}
+        {nextMsg && <SuccessText>{nextMsg}</SuccessText>}
+        <button
+          onClick={launchNext}
+          disabled={savingNext || !code || !opponent || !datetime}
+          style={{
+            ...primaryBtn,
+            background: '#e0312a',
+            opacity: savingNext || !code || !opponent || !datetime ? 0.5 : 1,
+          }}
+        >
+          {savingNext ? 'Lancement…' : 'Lancer le match suivant'}
+        </button>
       </div>
     </div>
   )
 }
 
-const primaryBtn: React.CSSProperties = {
-  marginTop: 16,
+const inputStyle: React.CSSProperties = {
   width: '100%',
-  height: 56,
+  height: 50,
+  borderRadius: 12,
+  border: '1.5px solid #e7e9f2',
+  padding: '0 16px',
+  fontSize: 16,
+  fontFamily: 'var(--font-body)',
+  outline: 'none',
+  marginBottom: 12,
+}
+
+const primaryBtn: React.CSSProperties = {
+  marginTop: 4,
+  width: '100%',
+  height: 54,
   border: 'none',
   borderRadius: 14,
   background: '#14307a',
@@ -198,6 +247,40 @@ const primaryBtn: React.CSSProperties = {
   fontWeight: 800,
   fontSize: 17,
   cursor: 'pointer',
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        fontFamily: 'var(--font-display)',
+        fontWeight: 800,
+        fontSize: 13,
+        letterSpacing: '.06em',
+        textTransform: 'uppercase',
+        color: '#9aa0b4',
+        marginBottom: 8,
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+function ErrorText({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ color: '#e0312a', fontWeight: 600, fontSize: 13, marginBottom: 10 }}>
+      {children}
+    </div>
+  )
+}
+
+function SuccessText({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ color: '#2a8a5b', fontWeight: 700, fontSize: 13, marginBottom: 10 }}>
+      {children}
+    </div>
+  )
 }
 
 function ScoreInput({

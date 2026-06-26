@@ -68,7 +68,7 @@ export function ClassementScreen({
               lineHeight: 1,
             }}
           >
-            💬
+            ℹ️
           </button>
           {/* Discreet admin entry — opens a code-protected result form. */}
           <button

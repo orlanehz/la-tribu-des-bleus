@@ -3,6 +3,7 @@ import { PhoneFrame } from './components/PhoneFrame'
 import { PronoScreen } from './screens/PronoScreen'
 import { ClassementScreen } from './screens/ClassementScreen'
 import { NameGate } from './screens/NameGate'
+import { AdminPanel } from './screens/AdminPanel'
 import type { Tab } from './components/BottomNav'
 import { usePlayerName } from './lib/usePlayerName'
 import {
@@ -32,6 +33,22 @@ export default function App() {
   const [cOpp, setCOpp] = useState(1)
   const [saving, setSaving] = useState(false)
   const [alreadyPredicted, setAlreadyPredicted] = useState(false)
+
+  // Hidden admin panel: opens via the gear on the leaderboard or the #admin URL.
+  const [showAdmin, setShowAdmin] = useState(
+    () => typeof window !== 'undefined' && window.location.hash === '#admin',
+  )
+  useEffect(() => {
+    const onHash = () => setShowAdmin(window.location.hash === '#admin')
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+  const closeAdmin = () => {
+    if (window.location.hash === '#admin') {
+      history.replaceState(null, '', window.location.pathname)
+    }
+    setShowAdmin(false)
+  }
 
   // Tick every 20s so the lock flips on its own at kickoff even if the page
   // stays open. Predictions close once now >= the match's kickoff_at.
@@ -176,8 +193,20 @@ export default function App() {
             pot={pot}
             playerName={name}
             loading={loadingBoard}
+            onOpenAdmin={() => setShowAdmin(true)}
             activeTab={tab}
             onTab={setTab}
+          />
+        )}
+
+        {showAdmin && (
+          <AdminPanel
+            match={match}
+            onClose={closeAdmin}
+            onSaved={() => {
+              refreshLeaderboard()
+              fetchCurrentMatch().then((m) => setMatch(m)).catch(() => {})
+            }}
           />
         )}
       </PhoneFrame>

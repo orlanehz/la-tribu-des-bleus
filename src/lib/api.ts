@@ -81,6 +81,23 @@ export async function savePrediction(p: Prediction): Promise<void> {
   if (error) throw error
 }
 
+/**
+ * Admin-only: set the current match's real result. The secret code is verified
+ * server-side by the set_match_result function — it never lives in the app.
+ */
+export async function setMatchResult(
+  home: number,
+  away: number,
+  secret: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('set_match_result', {
+    p_home: home,
+    p_away: away,
+    p_secret: secret,
+  })
+  if (error) throw new Error(error.message)
+}
+
 const EXACT_POINTS = 3
 const WINNER_POINTS = 1
 

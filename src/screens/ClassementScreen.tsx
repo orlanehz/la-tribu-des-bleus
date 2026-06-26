@@ -7,6 +7,7 @@ export function ClassementScreen({
   pot,
   playerName,
   loading,
+  onOpenAdmin,
   activeTab,
   onTab,
 }: {
@@ -14,6 +15,7 @@ export function ClassementScreen({
   pot: string
   playerName: string
   loading: boolean
+  onOpenAdmin: () => void
   activeTab: Tab
   onTab: (t: Tab) => void
 }) {
@@ -46,18 +48,36 @@ export function ClassementScreen({
         >
           Classement
         </div>
-        <div
-          style={{
-            background: '#14307a',
-            color: '#fff',
-            borderRadius: 999,
-            padding: '8px 16px',
-            fontFamily: 'var(--font-display)',
-            fontWeight: 800,
-            fontSize: 16,
-          }}
-        >
-          {pot}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Discreet admin entry — opens a code-protected result form. */}
+          <button
+            onClick={onOpenAdmin}
+            aria-label="Admin"
+            style={{
+              border: 'none',
+              background: 'transparent',
+              color: '#c2c7d6',
+              fontSize: 18,
+              cursor: 'pointer',
+              padding: 4,
+              lineHeight: 1,
+            }}
+          >
+            ⚙️
+          </button>
+          <div
+            style={{
+              background: '#14307a',
+              color: '#fff',
+              borderRadius: 999,
+              padding: '8px 16px',
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              fontSize: 16,
+            }}
+          >
+            {pot}
+          </div>
         </div>
       </div>
 

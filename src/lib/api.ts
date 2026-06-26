@@ -21,8 +21,10 @@ export type Prediction = {
 
 export type ClassementRow = {
   name: string
-  euros: number
+  euros: number // total won across all finished matches
+  eurosCurrent: number // won on the current match (0 while it's still in play)
   points: number
+  prono?: { home: number; away: number } // their pick for the current match
 }
 
 export type MatchResult = {
@@ -41,7 +43,8 @@ export type MatchResult = {
 export type Classement = {
   rows: ClassementRow[]
   results: MatchResult[]
-  currentPot: number
+  currentPot: number // money in play on the current match
+  totalDistributed: number // total money won since the start
   stake: number
 }
 
@@ -235,7 +238,15 @@ export async function fetchClassement(): Promise<Classement> {
     byMatch.set(p.match_id, list)
   }
 
+  const currentMatch = matches.find((m) => m.is_current) ?? null
+  const currentPreds = currentMatch ? byMatch.get(currentMatch.id) ?? [] : []
+  const pronoByName = new Map<string, { home: number; away: number }>()
+  for (const p of currentPreds) {
+    pronoByName.set(p.player_name, { home: p.home_score, away: p.away_score })
+  }
+
   const euros = new Map<string, number>()
+  const eurosCurrent = new Map<string, number>()
   const points = new Map<string, number>()
   const ensure = (name: string) => {
     if (!euros.has(name)) euros.set(name, 0)
@@ -268,7 +279,11 @@ export async function fetchClassement(): Promise<Classement> {
     if (maxPts > 0) {
       const winners = scored.filter((s) => s.pts === maxPts).map((s) => s.name)
       const share = pot / winners.length
-      for (const w of winners) euros.set(w, euros.get(w)! + share)
+      for (const w of winners) {
+        euros.set(w, euros.get(w)! + share)
+        // Track winnings on the current match separately ("gain en cours").
+        if (m.is_current) eurosCurrent.set(w, (eurosCurrent.get(w) ?? 0) + share)
+      }
       carry = 0
       results.push({
         id: m.id,
@@ -301,8 +316,16 @@ export async function fetchClassement(): Promise<Classement> {
   }
 
   const rows: ClassementRow[] = [...euros.keys()]
-    .map((name) => ({ name, euros: euros.get(name)!, points: points.get(name)! }))
+    .map((name) => ({
+      name,
+      euros: euros.get(name)!,
+      eurosCurrent: eurosCurrent.get(name) ?? 0,
+      points: points.get(name)!,
+      prono: pronoByName.get(name),
+    }))
     .sort((a, b) => b.euros - a.euros || b.points - a.points || a.name.localeCompare(b.name, 'fr'))
 
-  return { rows, results: results.reverse(), currentPot, stake }
+  const totalDistributed = [...euros.values()].reduce((s, v) => s + v, 0)
+
+  return { rows, results: results.reverse(), currentPot, totalDistributed, stake }
 }

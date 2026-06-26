@@ -9,6 +9,7 @@ export function ClassementScreen({
   classement,
   playerName,
   loading,
+  revealPronos,
   onOpenAdmin,
   activeTab,
   onTab,
@@ -16,6 +17,7 @@ export function ClassementScreen({
   classement: Classement | null
   playerName: string
   loading: boolean
+  revealPronos: boolean
   onOpenAdmin: () => void
   activeTab: Tab
   onTab: (t: Tab) => void
@@ -23,6 +25,7 @@ export function ClassementScreen({
   const rows = classement?.rows ?? []
   const results = classement?.results ?? []
   const currentPot = classement?.currentPot ?? 0
+  const totalDistributed = classement?.totalDistributed ?? 0
   const [showInfo, setShowInfo] = useState(false)
 
   return (
@@ -86,21 +89,21 @@ export function ClassementScreen({
           >
             ⚙️
           </button>
-          <div
-            style={{
-              background: '#14307a',
-              color: '#fff',
-              borderRadius: 999,
-              padding: '8px 16px',
-              fontFamily: 'var(--font-display)',
-              fontWeight: 800,
-              fontSize: 15,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {currentPot > 0 ? `${eur(currentPot)} en jeu` : '—'}
-          </div>
         </div>
+      </div>
+
+      {/* Money summary: what's in play now, and what's been won since the start. */}
+      <div style={{ display: 'flex', gap: 10, padding: '0 18px 14px' }}>
+        <SummaryPill
+          label="En jeu"
+          value={currentPot > 0 ? eur(currentPot) : '—'}
+          bg="#14307a"
+        />
+        <SummaryPill
+          label="Gagné depuis le début"
+          value={eur(totalDistributed)}
+          bg="#2a8a5b"
+        />
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 18px 12px' }}>
@@ -116,6 +119,7 @@ export function ClassementScreen({
                 rank={i + 1}
                 row={row}
                 isMe={row.name === playerName}
+                reveal={revealPronos}
               />
             ))}
 
@@ -270,14 +274,42 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   )
 }
 
+function SummaryPill({ label, value, bg }: { label: string; value: string; bg: string }) {
+  return (
+    <div
+      style={{
+        flex: 1,
+        background: bg,
+        color: '#fff',
+        borderRadius: 16,
+        padding: '10px 14px',
+      }}
+    >
+      <div style={{ fontSize: 11, fontWeight: 600, opacity: 0.85 }}>{label}</div>
+      <div
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontWeight: 800,
+          fontSize: 20,
+          marginTop: 2,
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  )
+}
+
 function PlayerRow({
   rank,
   row,
   isMe,
+  reveal,
 }: {
   rank: number
   row: ClassementRow
   isMe: boolean
+  reveal: boolean
 }) {
   // Trophy only for an actual money leader, not when everyone is at 0 €.
   const isLeader = rank === 1 && row.euros > 0
@@ -291,6 +323,19 @@ function PlayerRow({
   const nameColor = isMe ? '#14307a' : '#101427'
   const nameWeight = isLeader || isMe ? 800 : 700
   const label = isMe ? `Toi · ${row.name}` : row.name
+
+  // Prono sub-line: revealed score after kickoff, locked hint before, nothing
+  // if they didn't play the current match.
+  let pronoLine: React.ReactNode = null
+  if (row.prono) {
+    pronoLine = reveal ? (
+      <span>
+        Prono : <b style={{ color: '#14307a' }}>{row.prono.home} – {row.prono.away}</b>
+      </span>
+    ) : (
+      <span>Prono enregistré 🔒</span>
+    )
+  }
 
   return (
     <div
@@ -320,19 +365,29 @@ function PlayerRow({
           {rank}
         </span>
       )}
-      <div style={{ flex: 1, minWidth: 0, fontWeight: nameWeight, fontSize: 17, color: nameColor }}>
-        {label}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: nameWeight, fontSize: 17, color: nameColor }}>{label}</div>
+        {pronoLine && (
+          <div style={{ fontSize: 12, color: '#9aa0b4', fontWeight: 600, marginTop: 2 }}>
+            {pronoLine}
+          </div>
+        )}
       </div>
-      <span
-        style={{
-          fontFamily: 'var(--font-display)',
-          fontWeight: 800,
-          fontSize: 20,
-          color: row.euros > 0 ? '#2a8a5b' : '#c2c7d6',
-        }}
-      >
-        {eur(row.euros)}
-      </span>
+      <div style={{ textAlign: 'right' }}>
+        <div
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 800,
+            fontSize: 20,
+            color: row.euros > 0 ? '#2a8a5b' : '#c2c7d6',
+          }}
+        >
+          {eur(row.euros)}
+        </div>
+        <div style={{ fontSize: 11, color: '#9aa0b4', fontWeight: 600, marginTop: 1 }}>
+          en cours {eur(row.eurosCurrent)}
+        </div>
+      </div>
     </div>
   )
 }

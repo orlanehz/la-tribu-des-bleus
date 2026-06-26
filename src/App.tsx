@@ -219,6 +219,7 @@ export default function App() {
             classement={classement}
             playerName={name}
             loading={loadingBoard}
+            revealPronos={locked}
             onOpenAdmin={() => setShowAdmin(true)}
             activeTab={tab}
             onTab={setTab}

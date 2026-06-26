@@ -1,17 +1,21 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fetchMessages, postMessage, type Message } from '../lib/api'
 
-/** Loads the family messages and keeps them fresh (poll every 25s). */
-export function useMessages() {
+/** Loads the current match's messages and keeps them fresh (poll every 25s). */
+export function useMessages(matchId: string | null | undefined) {
   const [messages, setMessages] = useState<Message[]>([])
 
   const load = useCallback(async () => {
+    if (!matchId) {
+      setMessages([])
+      return
+    }
     try {
-      setMessages(await fetchMessages())
+      setMessages(await fetchMessages(matchId))
     } catch {
       /* banner is non-critical — stay quiet on errors */
     }
-  }, [])
+  }, [matchId])
 
   useEffect(() => {
     load()
@@ -20,11 +24,12 @@ export function useMessages() {
   }, [load])
 
   const post = useCallback(
-    async (author: string, text: string) => {
-      await postMessage(author, text)
+    async (author: string, city: string | null, text: string) => {
+      if (!matchId) return
+      await postMessage(matchId, author, city, text)
       await load()
     },
-    [load],
+    [matchId, load],
   )
 
   return { messages, post }
@@ -71,6 +76,7 @@ export function MessageTicker({ messages }: { messages: Message[] }) {
         }}
       >
         <span style={{ color: '#fff', fontWeight: 800 }}>{m.author}</span>
+        {m.city && <span style={{ opacity: 0.85 }}>, {m.city}</span>}
         <span style={{ opacity: 0.6 }}> · </span>
         {m.text}
       </div>
@@ -84,10 +90,12 @@ export function MessageTicker({ messages }: { messages: Message[] }) {
  */
 export function MessageBubble({
   playerName,
+  playerCity,
   onPost,
 }: {
   playerName: string
-  onPost: (author: string, text: string) => Promise<void>
+  playerCity: string | null
+  onPost: (text: string) => Promise<void>
 }) {
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
@@ -98,7 +106,7 @@ export function MessageBubble({
     if (!clean) return
     setSending(true)
     try {
-      await onPost(playerName, clean)
+      await onPost(clean)
       setText('')
       setOpen(false)
     } catch {
@@ -188,7 +196,8 @@ export function MessageBubble({
               </button>
             </div>
             <div style={{ color: '#5b6175', fontSize: 13, marginBottom: 14 }}>
-              en tant que <b>{playerName}</b> · visible par toute la Tribu
+              en tant que <b>{playerName}</b>
+              {playerCity ? `, ${playerCity}` : ''} · visible par toute la Tribu
             </div>
 
             <textarea

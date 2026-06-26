@@ -3,6 +3,7 @@ import { PhoneFrame } from './components/PhoneFrame'
 import { PronoScreen } from './screens/PronoScreen'
 import { ClassementScreen } from './screens/ClassementScreen'
 import { NameGate } from './screens/NameGate'
+import { CityGate } from './screens/CityGate'
 import { WaitingScreen } from './screens/WaitingScreen'
 import { AdminPanel } from './screens/AdminPanel'
 import type { Tab } from './components/BottomNav'
@@ -18,7 +19,7 @@ import {
 } from './lib/api'
 
 export default function App() {
-  const { name, save: saveName } = usePlayerName()
+  const { name, city, save: saveName, saveCity } = usePlayerName()
 
   const [tab, setTab] = useState<Tab>('prono')
   const [match, setMatch] = useState<Match | null>(null)
@@ -179,6 +180,8 @@ export default function App() {
 
         {!name ? (
           <NameGate playedNames={playedNames} onSubmit={saveName} />
+        ) : !city ? (
+          <CityGate playerName={name} onSubmit={saveCity} />
         ) : tab === 'prono' ? (
           loadingMatch ? (
             <CenterMessage dark text="Chargement du match…" />
@@ -187,6 +190,8 @@ export default function App() {
               match={match}
               classement={classement}
               tournamentOver={tournamentOver}
+              playerName={name}
+              playerCity={city}
               myCFr={cFr}
               myCOpp={cOpp}
               hasPrediction={alreadyPredicted}
@@ -197,6 +202,7 @@ export default function App() {
             <PronoScreen
               match={match!}
               playerName={name}
+              playerCity={city}
               cFr={cFr}
               cOpp={cOpp}
               step={step}

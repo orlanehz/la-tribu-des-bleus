@@ -6,6 +6,7 @@ import { MessageBubble, MessageTicker, useMessages } from '../components/Message
 export function PronoScreen({
   match,
   playerName,
+  playerCity,
   cFr,
   cOpp,
   step,
@@ -18,6 +19,7 @@ export function PronoScreen({
 }: {
   match: Match
   playerName: string
+  playerCity: string | null
   cFr: number
   cOpp: number
   step: (side: 'cFr' | 'cOpp', d: number) => void
@@ -28,7 +30,7 @@ export function PronoScreen({
   activeTab: Tab
   onTab: (t: Tab) => void
 }) {
-  const { messages, post } = useMessages()
+  const { messages, post } = useMessages(match.id)
 
   const buttonLabel = saving
     ? 'Enregistrement…'
@@ -194,7 +196,11 @@ export function PronoScreen({
         )}
       </div>
 
-      <MessageBubble playerName={playerName} onPost={post} />
+      <MessageBubble
+        playerName={playerName}
+        playerCity={playerCity}
+        onPost={(text) => post(playerName, playerCity, text)}
+      />
 
       <BottomNav active={activeTab} onChange={onTab} variant="dark" />
     </div>

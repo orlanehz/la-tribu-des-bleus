@@ -73,28 +73,43 @@ export async function fetchMyPrediction(
 
 export type Message = {
   author: string
+  city: string | null
   text: string
   created_at: string
 }
 
-/** Recent family messages for the scrolling banner (newest first). */
-export async function fetchMessages(limit = 40): Promise<Message[]> {
+/** Recent messages for one match's banner (newest first). */
+export async function fetchMessages(matchId: string, limit = 40): Promise<Message[]> {
   const { data, error } = await supabase
     .from('messages')
-    .select('author, text, created_at')
+    .select('author, author_city, text, created_at')
+    .eq('match_id', matchId)
     .order('created_at', { ascending: false })
     .limit(limit)
   if (error) throw error
-  return data ?? []
+  return (data ?? []).map((d) => ({
+    author: d.author,
+    city: d.author_city,
+    text: d.text,
+    created_at: d.created_at,
+  }))
 }
 
-/** Post a message to the banner. */
-export async function postMessage(author: string, text: string): Promise<void> {
+/** Post a message attached to the given match. */
+export async function postMessage(
+  matchId: string,
+  author: string,
+  city: string | null,
+  text: string,
+): Promise<void> {
   const clean = text.trim().slice(0, 200)
   if (!clean) return
-  const { error } = await supabase
-    .from('messages')
-    .insert({ author: author.slice(0, 40), text: clean })
+  const { error } = await supabase.from('messages').insert({
+    match_id: matchId,
+    author: author.slice(0, 40),
+    author_city: city ? city.slice(0, 40) : null,
+    text: clean,
+  })
   if (error) throw error
 }
 

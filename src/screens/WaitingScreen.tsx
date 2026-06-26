@@ -1,6 +1,7 @@
 import type { Classement, Match, MatchResult } from '../lib/api'
 import { StatusBar } from '../components/PhoneFrame'
 import { BottomNav, type Tab } from '../components/BottomNav'
+import { MessageBubble, MessageTicker, useMessages } from '../components/Messages'
 
 const eur = (n: number) => `${n.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} €`
 
@@ -14,6 +15,8 @@ export function WaitingScreen({
   match,
   classement,
   tournamentOver,
+  playerName,
+  playerCity,
   myCFr,
   myCOpp,
   hasPrediction,
@@ -23,12 +26,15 @@ export function WaitingScreen({
   match: Match | null
   classement: Classement | null
   tournamentOver: boolean
+  playerName: string
+  playerCity: string | null
   myCFr: number
   myCOpp: number
   hasPrediction: boolean
   activeTab: Tab
   onTab: (t: Tab) => void
 }) {
+  const { messages, post } = useMessages(match?.id)
   const results = classement?.results ?? []
   const rows = classement?.rows ?? []
   const last: MatchResult | undefined =
@@ -53,7 +59,7 @@ export function WaitingScreen({
             'radial-gradient(120% 60% at 50% 0%,rgba(255,255,255,.10),transparent 60%)',
         }}
       />
-      <StatusBar />
+      <StatusBar rightSlot={<MessageTicker messages={messages} />} />
       <div style={{ display: 'flex', height: 5, width: '100%', position: 'relative', zIndex: 1 }}>
         <div style={{ flex: 1, background: '#fff' }} />
         <div style={{ flex: 1, background: '#e0312a' }} />
@@ -103,6 +109,14 @@ export function WaitingScreen({
           />
         )}
       </div>
+
+      {match && (
+        <MessageBubble
+          playerName={playerName}
+          playerCity={playerCity}
+          onPost={(text) => post(playerName, playerCity, text)}
+        />
+      )}
 
       <BottomNav active={activeTab} onChange={onTab} variant="dark" />
     </div>

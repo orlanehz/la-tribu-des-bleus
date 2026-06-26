@@ -95,7 +95,7 @@ export function CityGate({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && submit()}
-          placeholder="Ex. Viarmes, Asnières-sur-Oise, Paimpol, Parmain"
+          placeholder="Ex. Asnières-sur-Oise"
           autoFocus
           style={{
             marginTop: 28,

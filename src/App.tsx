@@ -7,13 +7,12 @@ import { AdminPanel } from './screens/AdminPanel'
 import type { Tab } from './components/BottomNav'
 import { usePlayerName } from './lib/usePlayerName'
 import {
+  fetchClassement,
   fetchCurrentMatch,
-  fetchLeaderboard,
   fetchMyPrediction,
   fetchPlayedNames,
-  fetchPot,
   savePrediction,
-  type LeaderboardRow,
+  type Classement,
   type Match,
 } from './lib/api'
 
@@ -23,8 +22,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('prono')
   const [match, setMatch] = useState<Match | null>(null)
   const [playedNames, setPlayedNames] = useState<string[]>([])
-  const [pot, setPot] = useState('—')
-  const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([])
+  const [classement, setClassement] = useState<Classement | null>(null)
   const [loadingBoard, setLoadingBoard] = useState(true)
   const [loadingMatch, setLoadingMatch] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -71,7 +69,7 @@ export default function App() {
   const refreshLeaderboard = useCallback(async () => {
     setLoadingBoard(true)
     try {
-      setLeaderboard(await fetchLeaderboard())
+      setClassement(await fetchClassement())
     } catch (e) {
       setError(String(e))
     } finally {
@@ -79,15 +77,14 @@ export default function App() {
     }
   }, [])
 
-  // Load match + pot once, and the player's existing prediction once we know them.
+  // Load the current match, and the player's existing prediction once we know them.
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       try {
-        const [m, p] = await Promise.all([fetchCurrentMatch(), fetchPot()])
+        const m = await fetchCurrentMatch()
         if (cancelled) return
         setMatch(m)
-        setPot(p)
         if (m) {
           // Who's already played → greys out names in the picker.
           fetchPlayedNames(m.id)
@@ -189,8 +186,7 @@ export default function App() {
           )
         ) : (
           <ClassementScreen
-            rows={leaderboard}
-            pot={pot}
+            classement={classement}
             playerName={name}
             loading={loadingBoard}
             onOpenAdmin={() => setShowAdmin(true)}

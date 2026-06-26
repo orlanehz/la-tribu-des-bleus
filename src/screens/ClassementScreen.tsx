@@ -1,24 +1,28 @@
-import type { LeaderboardRow } from '../lib/api'
+import type { Classement, ClassementRow, MatchResult } from '../lib/api'
 import { StatusBar } from '../components/PhoneFrame'
 import { BottomNav, type Tab } from '../components/BottomNav'
 
+const eur = (n: number) => `${n.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} €`
+
 export function ClassementScreen({
-  rows,
-  pot,
+  classement,
   playerName,
   loading,
   onOpenAdmin,
   activeTab,
   onTab,
 }: {
-  rows: LeaderboardRow[]
-  pot: string
+  classement: Classement | null
   playerName: string
   loading: boolean
   onOpenAdmin: () => void
   activeTab: Tab
   onTab: (t: Tab) => void
 }) {
+  const rows = classement?.rows ?? []
+  const results = classement?.results ?? []
+  const currentPot = classement?.currentPot ?? 0
+
   return (
     <div
       style={{
@@ -73,10 +77,11 @@ export function ClassementScreen({
               padding: '8px 16px',
               fontFamily: 'var(--font-display)',
               fontWeight: 800,
-              fontSize: 16,
+              fontSize: 15,
+              whiteSpace: 'nowrap',
             }}
           >
-            {pot}
+            {currentPot > 0 ? `${eur(currentPot)} en jeu` : '—'}
           </div>
         </div>
       </div>
@@ -87,14 +92,25 @@ export function ClassementScreen({
         ) : rows.length === 0 ? (
           <EmptyState text="Personne n'a encore joué. Sois le premier !" />
         ) : (
-          rows.map((row, i) => (
-            <PlayerRow
-              key={row.name}
-              rank={i + 1}
-              row={row}
-              isMe={row.name === playerName}
-            />
-          ))
+          <>
+            {rows.map((row, i) => (
+              <PlayerRow
+                key={row.name}
+                rank={i + 1}
+                row={row}
+                isMe={row.name === playerName}
+              />
+            ))}
+
+            {results.length > 0 && (
+              <>
+                <SectionTitle>Résultats des matchs</SectionTitle>
+                {results.map((r) => (
+                  <MatchRow key={r.id} result={r} />
+                ))}
+              </>
+            )}
+          </>
         )}
       </div>
 
@@ -119,16 +135,35 @@ function EmptyState({ text }: { text: string }) {
   )
 }
 
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        fontFamily: 'var(--font-display)',
+        fontWeight: 800,
+        fontSize: 13,
+        letterSpacing: '.08em',
+        textTransform: 'uppercase',
+        color: '#9aa0b4',
+        margin: '20px 4px 10px',
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
 function PlayerRow({
   rank,
   row,
   isMe,
 }: {
   rank: number
-  row: LeaderboardRow
+  row: ClassementRow
   isMe: boolean
 }) {
-  const isLeader = rank === 1
+  // Trophy only for an actual money leader, not when everyone is at 0 €.
+  const isLeader = rank === 1 && row.euros > 0
 
   const cardStyle: React.CSSProperties = isLeader
     ? { background: '#fff', border: '1.5px solid #e6a817' }
@@ -168,19 +203,82 @@ function PlayerRow({
           {rank}
         </span>
       )}
-      <div style={{ flex: 1, fontWeight: nameWeight, fontSize: 17, color: nameColor }}>
-        {label}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: nameWeight, fontSize: 17, color: nameColor }}>{label}</div>
+        <div style={{ fontSize: 12, color: '#9aa0b4', fontWeight: 600, marginTop: 1 }}>
+          {row.points} pt{row.points > 1 ? 's' : ''}
+        </div>
       </div>
       <span
         style={{
           fontFamily: 'var(--font-display)',
           fontWeight: 800,
-          fontSize: 22,
-          color: '#14307a',
+          fontSize: 20,
+          color: row.euros > 0 ? '#2a8a5b' : '#c2c7d6',
         }}
       >
-        {row.points}
+        {eur(row.euros)}
       </span>
+    </div>
+  )
+}
+
+function MatchRow({ result: r }: { result: MatchResult }) {
+  let outcome: React.ReactNode
+  if (r.rolledOver) {
+    outcome = (
+      <span style={{ color: '#b8860b', fontWeight: 700 }}>
+        Personne — {eur(r.pot)} reportés
+      </span>
+    )
+  } else if (r.winners.length === 1) {
+    outcome = (
+      <span style={{ color: '#2a8a5b', fontWeight: 700 }}>
+        🏆 {r.winners[0]} (+{eur(r.sharePerWinner)})
+      </span>
+    )
+  } else {
+    outcome = (
+      <span style={{ color: '#2a8a5b', fontWeight: 700 }}>
+        Partagé : {r.winners.join(', ')} (+{eur(r.sharePerWinner)} chacun)
+      </span>
+    )
+  }
+
+  return (
+    <div
+      style={{
+        background: '#fff',
+        border: '1px solid #e7e9f2',
+        borderRadius: 16,
+        padding: '12px 14px',
+        marginBottom: 9,
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 8,
+        }}
+      >
+        <div style={{ fontWeight: 700, fontSize: 15, color: '#101427' }}>
+          {r.homeTeam} <b>{r.homeActual}</b> – <b>{r.awayActual}</b> {r.awayTeam}
+        </div>
+        <div
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 800,
+            fontSize: 13,
+            color: '#14307a',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {eur(r.pot)}
+        </div>
+      </div>
+      <div style={{ fontSize: 13, marginTop: 4 }}>{outcome}</div>
     </div>
   )
 }

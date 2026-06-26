@@ -19,9 +19,30 @@ export type Prediction = {
   away_score: number
 }
 
-export type LeaderboardRow = {
+export type ClassementRow = {
   name: string
+  euros: number
   points: number
+}
+
+export type MatchResult = {
+  id: string
+  round: string
+  homeTeam: string
+  awayTeam: string
+  homeActual: number
+  awayActual: number
+  pot: number
+  winners: string[]
+  sharePerWinner: number
+  rolledOver: boolean
+}
+
+export type Classement = {
+  rows: ClassementRow[]
+  results: MatchResult[]
+  currentPot: number
+  stake: number
 }
 
 /** The match currently open for predictions (matches.is_current = true). */
@@ -33,16 +54,6 @@ export async function fetchCurrentMatch(): Promise<Match | null> {
     .maybeSingle()
   if (error) throw error
   return data
-}
-
-export async function fetchPot(): Promise<string> {
-  const { data, error } = await supabase
-    .from('config')
-    .select('pot')
-    .eq('id', 1)
-    .maybeSingle()
-  if (error) throw error
-  return data?.pot ?? '0 €'
 }
 
 /** This player's prediction for a given match, if they've already submitted one. */
@@ -128,39 +139,109 @@ function scorePrediction(
 }
 
 /**
- * Build the leaderboard by summing each player's points across every match
- * that already has a real result. Computed client-side — fine for a family.
+ * The whole money + ranking picture, computed client-side.
+ *
+ * Rules (chosen by the organiser):
+ *  - Each match has its own pot = stake × (players who predicted that match),
+ *    plus any rollover carried from earlier matches nobody won.
+ *  - The match winner is whoever scored the most points on it (exact = 3 beats
+ *    right-winner = 1). Ties split the pot equally.
+ *  - If nobody scored on a match, its pot rolls over to the next one.
+ *
+ * Matches are processed in chronological order so the rollover carries forward.
  */
-export async function fetchLeaderboard(): Promise<LeaderboardRow[]> {
-  const [matchesRes, predsRes] = await Promise.all([
+export async function fetchClassement(): Promise<Classement> {
+  const [cfgRes, matchesRes, predsRes] = await Promise.all([
+    supabase.from('config').select('stake_eur').eq('id', 1).maybeSingle(),
     supabase
       .from('matches')
-      .select('id, home_actual, away_actual')
-      .not('home_actual', 'is', null)
-      .not('away_actual', 'is', null),
+      .select('id, round, home_team, away_team, home_actual, away_actual, is_current, created_at')
+      .order('created_at', { ascending: true }),
     supabase.from('predictions').select('match_id, player_name, home_score, away_score'),
   ])
+  if (cfgRes.error) throw cfgRes.error
   if (matchesRes.error) throw matchesRes.error
   if (predsRes.error) throw predsRes.error
 
-  const finished = new Map(
-    (matchesRes.data ?? []).map((m) => [
-      m.id,
-      { home_actual: m.home_actual as number, away_actual: m.away_actual as number },
-    ]),
-  )
+  const stake = Number(cfgRes.data?.stake_eur ?? 1)
+  const matches = matchesRes.data ?? []
+  const preds = predsRes.data ?? []
 
-  const totals = new Map<string, number>()
-  // Make sure everyone who ever predicted shows up, even with 0 points.
-  for (const pred of predsRes.data ?? []) {
-    if (!totals.has(pred.player_name)) totals.set(pred.player_name, 0)
-    const match = finished.get(pred.match_id)
-    if (match) {
-      totals.set(pred.player_name, totals.get(pred.player_name)! + scorePrediction(pred, match))
+  const byMatch = new Map<string, typeof preds>()
+  for (const p of preds) {
+    const list = byMatch.get(p.match_id) ?? []
+    list.push(p)
+    byMatch.set(p.match_id, list)
+  }
+
+  const euros = new Map<string, number>()
+  const points = new Map<string, number>()
+  const ensure = (name: string) => {
+    if (!euros.has(name)) euros.set(name, 0)
+    if (!points.has(name)) points.set(name, 0)
+  }
+
+  const results: MatchResult[] = []
+  let carry = 0
+  let currentPot = 0
+
+  for (const m of matches) {
+    const players = byMatch.get(m.id) ?? []
+    for (const p of players) ensure(p.player_name)
+    const base = stake * players.length
+    const finished = m.home_actual != null && m.away_actual != null
+
+    if (!finished) {
+      // The open match: its pot is in play (stake × players + whatever rolled in).
+      if (m.is_current) currentPot = base + carry
+      continue
+    }
+
+    const actual = { home_actual: m.home_actual as number, away_actual: m.away_actual as number }
+    const scored = players.map((p) => ({ name: p.player_name, pts: scorePrediction(p, actual) }))
+    for (const s of scored) points.set(s.name, points.get(s.name)! + s.pts)
+
+    const maxPts = scored.reduce((mx, s) => Math.max(mx, s.pts), 0)
+    const pot = base + carry
+
+    if (maxPts > 0) {
+      const winners = scored.filter((s) => s.pts === maxPts).map((s) => s.name)
+      const share = pot / winners.length
+      for (const w of winners) euros.set(w, euros.get(w)! + share)
+      carry = 0
+      results.push({
+        id: m.id,
+        round: m.round,
+        homeTeam: m.home_team,
+        awayTeam: m.away_team,
+        homeActual: actual.home_actual,
+        awayActual: actual.away_actual,
+        pot,
+        winners,
+        sharePerWinner: share,
+        rolledOver: false,
+      })
+    } else {
+      // Nobody scored → the whole pot rolls into the next match.
+      carry = pot
+      results.push({
+        id: m.id,
+        round: m.round,
+        homeTeam: m.home_team,
+        awayTeam: m.away_team,
+        homeActual: actual.home_actual,
+        awayActual: actual.away_actual,
+        pot,
+        winners: [],
+        sharePerWinner: 0,
+        rolledOver: true,
+      })
     }
   }
 
-  return [...totals.entries()]
-    .map(([name, points]) => ({ name, points }))
-    .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name))
+  const rows: ClassementRow[] = [...euros.keys()]
+    .map((name) => ({ name, euros: euros.get(name)!, points: points.get(name)! }))
+    .sort((a, b) => b.euros - a.euros || b.points - a.points || a.name.localeCompare(b.name, 'fr'))
+
+  return { rows, results: results.reverse(), currentPot, stake }
 }

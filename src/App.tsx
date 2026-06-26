@@ -64,6 +64,8 @@ export default function App() {
   const matchFinished =
     !!match && match.home_actual != null && match.away_actual != null
   const waiting = !match || matchFinished
+  // The very end: the final has been played.
+  const tournamentOver = matchFinished && match?.round === 'Finale'
 
   const clamp = (v: number, d: number) => Math.min(9, Math.max(0, v + d))
   const step = (side: 'cFr' | 'cOpp', d: number) => {
@@ -183,6 +185,8 @@ export default function App() {
           ) : waiting ? (
             <WaitingScreen
               match={match}
+              classement={classement}
+              tournamentOver={tournamentOver}
               myCFr={cFr}
               myCOpp={cOpp}
               hasPrediction={alreadyPredicted}

@@ -124,7 +124,7 @@ export function MessageBubble({
         style={{
           position: 'absolute',
           right: 16,
-          bottom: 150,
+          bottom: 200,
           zIndex: 20,
           width: 54,
           height: 54,

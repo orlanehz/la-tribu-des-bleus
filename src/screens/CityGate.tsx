@@ -95,7 +95,7 @@ export function CityGate({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && submit()}
-          placeholder="Ex. Nantes"
+          placeholder="Ex. Viarmes, Asnières-sur-Oise, Paimpol, Parmain"
           autoFocus
           style={{
             marginTop: 28,

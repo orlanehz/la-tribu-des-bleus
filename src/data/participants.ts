@@ -6,7 +6,7 @@
 export const PARTICIPANTS: string[] = [
   'Orlane',
   'Lolo',
-  'Baptiou',
+  'Baptiste',
   'Bernard Et Martine',
   'Chloe',
   'Christophe',

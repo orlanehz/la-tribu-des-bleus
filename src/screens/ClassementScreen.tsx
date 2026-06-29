@@ -388,9 +388,9 @@ function PlayerRow({
         >
           {eur(row.euros)}
         </div>
-        <div style={{ fontSize: 11, color: '#9aa0b4', fontWeight: 600, marginTop: 1 }}>
+        {/* <div style={{ fontSize: 11, color: '#9aa0b4', fontWeight: 600, marginTop: 1 }}>
           en cours {eur(row.eurosCurrent)}
-        </div>
+        </div> */}
       </div>
     </div>
   )

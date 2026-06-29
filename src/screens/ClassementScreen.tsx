@@ -210,8 +210,12 @@ function RulesSheet({ onClose }: { onClose: () => void }) {
           Si plusieurs ont le même meilleur score, la cagnotte est{' '}
           <b>partagée</b> à parts égales.
         </Rule>
-        <Rule emoji="🎁" title="Personne ne marque">
-          La cagnotte est <b>reportée</b> sur le match suivant (elle grossit).
+        <Rule emoji="❌" title="Personne ne marque">
+          La cagnotte n'est pas distribuée.
+        </Rule>
+        <Rule emoji="⏱️" title="Score final">
+          Le prono porte sur le score à la <b>toute fin du match</b> :
+          prolongations et tirs au but inclus s'il y en a.
         </Rule>
       </div>
     </div>

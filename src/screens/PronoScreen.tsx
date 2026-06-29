@@ -107,6 +107,17 @@ export function PronoScreen({
         >
           {locked ? 'Prono verrouillé de' : 'Prono de'} {playerName}
         </div>
+        <div
+          style={{
+            textAlign: 'center',
+            color: '#9fb4e8',
+            fontWeight: 500,
+            fontSize: 11,
+            marginTop: 4,
+          }}
+        >
+          Score à la fin du match (prolongations et tirs au but inclus)
+        </div>
 
         <div
           style={{

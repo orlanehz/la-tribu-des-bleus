@@ -401,7 +401,7 @@ function MatchRow({ result: r }: { result: MatchResult }) {
   if (r.rolledOver) {
     outcome = (
       <span style={{ color: '#b8860b', fontWeight: 700 }}>
-        Personne — {eur(r.pot)} reportés
+        Personne n'a gagné — cagnotte non distribuée
       </span>
     )
   } else if (r.winners.length === 1) {

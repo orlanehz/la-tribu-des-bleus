@@ -309,8 +309,7 @@ export async function fetchClassement(): Promise<Classement> {
         rolledOver: false,
       })
     } else {
-      // Nobody scored → the whole pot rolls into the next match.
-      carry = pot
+      // Nobody scored → the pot is simply not distributed (no rollover).
       results.push({
         id: m.id,
         round: m.round,

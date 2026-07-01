@@ -138,7 +138,7 @@ function LastMatchCard({
   if (r.rolledOver) {
     outcome = (
       <span style={{ color: '#ffd27a', fontWeight: 700 }}>
-        Personne — {eur(r.pot)} reportés
+        Personne n'a gagné — cagnotte non distribuée
       </span>
     )
   } else if (r.winners.length === 1) {

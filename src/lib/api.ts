@@ -40,12 +40,23 @@ export type MatchResult = {
   rolledOver: boolean
 }
 
+export type Balance = {
+  name: string
+  won: number // total pots won
+  staked: number // 1 € per distributed match played
+  net: number // won − staked
+}
+
+export type Settlement = { from: string; to: string; amount: number }
+
 export type Classement = {
   rows: ClassementRow[]
   results: MatchResult[]
   currentPot: number // money in play on the current match
   totalDistributed: number // total money won since the start
   stake: number
+  balances: Balance[] // final net per player
+  settlements: Settlement[] // who owes whom, minimised
 }
 
 /** The match currently open for predictions (matches.is_current = true). */
@@ -257,6 +268,7 @@ export async function fetchClassement(): Promise<Classement> {
   }
 
   const euros = new Map<string, number>()
+  const staked = new Map<string, number>()
   const eurosCurrent = new Map<string, number>()
   const points = new Map<string, number>()
   const ensure = (name: string) => {
@@ -288,6 +300,8 @@ export async function fetchClassement(): Promise<Classement> {
     const pot = base + carry
 
     if (maxPts > 0) {
+      // Everyone who played this distributed match staked 1 € into its pot.
+      for (const s of scored) staked.set(s.name, (staked.get(s.name) ?? 0) + stake)
       const winners = scored.filter((s) => s.pts === maxPts).map((s) => s.name)
       const share = pot / winners.length
       for (const w of winners) {
@@ -337,5 +351,44 @@ export async function fetchClassement(): Promise<Classement> {
 
   const totalDistributed = [...euros.values()].reduce((s, v) => s + v, 0)
 
-  return { rows, results: results.reverse(), currentPot, totalDistributed, stake }
+  // Net per player (won − staked) and a minimal set of transfers to settle up.
+  const balances: Balance[] = [...euros.keys()]
+    .map((name) => {
+      const won = euros.get(name)!
+      const st = staked.get(name) ?? 0
+      return { name, won, staked: st, net: won - st }
+    })
+    .sort((a, b) => b.net - a.net || a.name.localeCompare(b.name, 'fr'))
+
+  const settlements = computeSettlements(balances)
+
+  return { rows, results: results.reverse(), currentPot, totalDistributed, stake, balances, settlements }
+}
+
+/**
+ * Greedy debt simplification: match the biggest debtor with the biggest creditor
+ * until everyone is settled, yielding a minimal-ish list of "A pays B" transfers.
+ */
+function computeSettlements(balances: Balance[]): Settlement[] {
+  const debtors = balances
+    .filter((b) => b.net < -0.005)
+    .map((b) => ({ name: b.name, amt: -b.net }))
+    .sort((a, b) => b.amt - a.amt)
+  const creditors = balances
+    .filter((b) => b.net > 0.005)
+    .map((b) => ({ name: b.name, amt: b.net }))
+    .sort((a, b) => b.amt - a.amt)
+
+  const out: Settlement[] = []
+  let i = 0
+  let j = 0
+  while (i < debtors.length && j < creditors.length) {
+    const pay = Math.min(debtors[i].amt, creditors[j].amt)
+    out.push({ from: debtors[i].name, to: creditors[j].name, amount: Math.round(pay * 100) / 100 })
+    debtors[i].amt -= pay
+    creditors[j].amt -= pay
+    if (debtors[i].amt < 0.005) i++
+    if (creditors[j].amt < 0.005) j++
+  }
+  return out
 }

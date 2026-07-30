@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { Classement, ClassementRow, MatchResult } from '../lib/api'
+import type { Balance, Classement, ClassementRow, MatchResult, Settlement } from '../lib/api'
 import { StatusBar } from '../components/PhoneFrame'
 import { BottomNav, type Tab } from '../components/BottomNav'
 
@@ -26,7 +26,10 @@ export function ClassementScreen({
   const results = classement?.results ?? []
   const currentPot = classement?.currentPot ?? 0
   const totalDistributed = classement?.totalDistributed ?? 0
+  const settlements = classement?.settlements ?? []
+  const balances = classement?.balances ?? []
   const [showInfo, setShowInfo] = useState(false)
+  const [showSettle, setShowSettle] = useState(false)
 
   return (
     <div
@@ -58,6 +61,21 @@ export function ClassementScreen({
           Classement
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Who owes whom (end-of-tournament settle-up). */}
+          <button
+            onClick={() => setShowSettle(true)}
+            aria-label="Comptes"
+            style={{
+              border: 'none',
+              background: 'transparent',
+              fontSize: 18,
+              cursor: 'pointer',
+              padding: 4,
+              lineHeight: 1,
+            }}
+          >
+            💸
+          </button>
           {/* How the money & points work. */}
           <button
             onClick={() => setShowInfo(true)}
@@ -136,6 +154,13 @@ export function ClassementScreen({
       </div>
 
       {showInfo && <RulesSheet onClose={() => setShowInfo(false)} />}
+      {showSettle && (
+        <SettlementSheet
+          settlements={settlements}
+          balances={balances}
+          onClose={() => setShowSettle(false)}
+        />
+      )}
 
       <BottomNav active={activeTab} onChange={onTab} variant="light" />
     </div>
@@ -217,6 +242,136 @@ function RulesSheet({ onClose }: { onClose: () => void }) {
           Le prono porte sur le score à la <b>toute fin du match</b> :
           prolongations et tirs au but inclus s'il y en a.
         </Rule>
+      </div>
+    </div>
+  )
+}
+
+function SettlementSheet({
+  settlements,
+  balances,
+  onClose,
+}: {
+  settlements: Settlement[]
+  balances: Balance[]
+  onClose: () => void
+}) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 50,
+        background: 'rgba(12,18,38,.55)',
+        display: 'flex',
+        alignItems: 'flex-end',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxHeight: '88%',
+          overflowY: 'auto',
+          background: '#fff',
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          padding: '20px 22px calc(22px + env(safe-area-inset-bottom))',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 4,
+          }}
+        >
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, color: '#101427' }}>
+            Qui doit quoi 💸
+          </div>
+          <button
+            onClick={onClose}
+            style={{ border: 'none', background: 'transparent', fontSize: 22, color: '#9aa0b4', cursor: 'pointer', lineHeight: 1 }}
+          >
+            ✕
+          </button>
+        </div>
+        <div style={{ color: '#5b6175', fontSize: 13, marginBottom: 16 }}>
+          Comptes finaux : 1 € misé par match joué, moins les cagnottes gagnées.
+        </div>
+
+        {settlements.length === 0 ? (
+          <div style={{ color: '#9aa0b4', fontWeight: 600, fontSize: 15, padding: '10px 0 18px', textAlign: 'center' }}>
+            Tout le monde est à l'équilibre 🤝
+          </div>
+        ) : (
+          settlements.map((s, i) => (
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                background: '#f6f7fb',
+                border: '1px solid #e7e9f2',
+                borderRadius: 14,
+                padding: '12px 14px',
+                marginBottom: 8,
+              }}
+            >
+              <span style={{ fontWeight: 800, color: '#e0312a', fontSize: 15 }}>{s.from}</span>
+              <span style={{ color: '#9aa0b4' }}>→</span>
+              <span style={{ fontWeight: 800, color: '#2a8a5b', fontSize: 15 }}>{s.to}</span>
+              <span
+                style={{
+                  marginLeft: 'auto',
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 800,
+                  fontSize: 17,
+                  color: '#14307a',
+                }}
+              >
+                {eur(s.amount)}
+              </span>
+            </div>
+          ))
+        )}
+
+        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 13, letterSpacing: '.06em', textTransform: 'uppercase', color: '#9aa0b4', margin: '18px 4px 10px' }}>
+          Bilan par personne
+        </div>
+        {balances.map((b) => (
+          <div
+            key={b.name}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '8px 4px',
+              borderBottom: '1px solid #f0f1f5',
+            }}
+          >
+            <span style={{ flex: 1, fontWeight: 700, fontSize: 15, color: '#101427' }}>{b.name}</span>
+            <span style={{ fontSize: 12, color: '#9aa0b4' }}>
+              gagné {eur(b.won)} · misé {eur(b.staked)}
+            </span>
+            <span
+              style={{
+                minWidth: 64,
+                textAlign: 'right',
+                fontFamily: 'var(--font-display)',
+                fontWeight: 800,
+                fontSize: 15,
+                color: b.net > 0 ? '#2a8a5b' : b.net < 0 ? '#e0312a' : '#9aa0b4',
+              }}
+            >
+              {b.net > 0 ? '+' : ''}
+              {eur(b.net)}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   )
